@@ -5,7 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/server.ts",
-    "build": "tsc",
+    "build": "tsc && esbuild src/server.ts --bundle --platform=node --target=node20 --outfile=dist/server.js --external:pdf-parse --external:express",
     "start": "node dist/server.js"
   },
   "dependencies": {
@@ -28,6 +28,7 @@
     "@types/pdf-parse": "^1.1.5",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "esbuild": "^0.20.2"
   }
 }
