@@ -14,15 +14,31 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
-  credentials: true
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      "http://localhost:3000",
+      "https://careerforge-pulse.vercel.app",
+      "https://www.careerforge-pulse.vercel.app"
+    ];
+    // Allow if origin is in list or if it's a non-browser request (origin is undefined)
+    if (!origin || allowedOrigins.includes(origin) || process.env.FRONTEND_URL === origin) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Blocked request from unauthorized origin: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(express.json());
 
 // Request Logging Middleware
 app.use((req, res, next) => {
-  console.log(`[Pulse] ${req.method} ${req.url}`);
+  const origin = req.get("origin") || "No Origin Header";
+  console.log(`[Pulse] ${req.method} ${req.url} | Origin: ${origin}`);
   next();
 });
 
@@ -58,6 +74,7 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
     const systemPrompt = fs.readFileSync(systemPromptPath, "utf-8");
     const userPrompt = `Role: ${role}\n\nResume Text:\n${resumeText}`;
 
+    console.log(`[Pulse] Dispatching AI orchestration for ${role}...`);
     const analysis = await orchestrateAI<AnalysisResponse>(userPrompt, systemPrompt, 'analysis');
     
     const sessionId = analysis.sessionId || Math.random().toString(36).substring(7);
@@ -65,6 +82,7 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
 
     sessions.set(sessionId, { profile: analysis.profile, role });
 
+    console.log(`[Pulse] Analysis complete. Sending response for session: ${sessionId}`);
     res.json(analysis);
   } catch (error: any) {
     console.error("[Pulse] Analysis pipeline failed:", error.message);
