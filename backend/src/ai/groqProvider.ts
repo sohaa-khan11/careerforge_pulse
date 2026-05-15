@@ -8,6 +8,12 @@ const groq = new OpenAI({
   baseURL: "https://api.groq.com/openai/v1",
 });
 
+if (!process.env.GROQ_API_KEY) {
+  console.error("[Groq] CRITICAL: GROQ_API_KEY is missing from environment.");
+} else {
+  console.log("[Groq] Provider initialized with API key.");
+}
+
 export const queryGroq = async (prompt: string, systemInstruction?: string): Promise<string> => {
   try {
     const response = await groq.chat.completions.create({

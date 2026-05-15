@@ -1,4 +1,3 @@
-import { queryGemini } from "./geminiProvider";
 import { queryGroq } from "./groqProvider";
 import { MOCK_ANALYSIS, MOCK_EVALUATION } from "./fallbackMock";
 
@@ -25,24 +24,22 @@ export const orchestrateAI = async <T>(
   systemInstruction: string, 
   type: 'analysis' | 'evaluation'
 ): Promise<T> => {
-  console.log(`[Pulse AI] Initiating ${type} sequence...`);
+  const modelUsed = "llama-3.3-70b-versatile";
+  console.log(`[Pulse AI] Initiating ${type} sequence using Primary: Groq (${modelUsed})`);
 
-  // 1. Primary: Gemini
-  try {
-    const result = await queryGemini(prompt, systemInstruction);
-    return extractJSON(result) as T;
-  } catch (error: any) {
-    console.warn(`[Pulse AI] Gemini failed (${error.message}). Attempting fallback...`);
-  }
-
-  // 2. Secondary: Groq
+  // 1. Primary: Groq
   try {
     const result = await queryGroq(prompt, systemInstruction);
-    return extractJSON(result) as T;
+    if (!result) throw new Error("Groq returned empty response");
+    
+    const parsed = extractJSON(result);
+    console.log(`[Pulse AI] Groq successfully completed ${type} task.`);
+    return parsed as T;
   } catch (error: any) {
-    console.error(`[Pulse AI] Groq failed (${error.message}). Returning static fallback.`);
+    console.error(`[Pulse AI] Groq failed (${error.message}). Triggering Resilience Layer (Static Mocks).`);
   }
 
-  // 3. Final Resilience Fallback
+  // 2. Final Resilience Fallback
+  console.log(`[Pulse AI] Serving mock response to prevent frontend "Failed to fetch" error.`);
   return (type === 'analysis' ? MOCK_ANALYSIS : MOCK_EVALUATION) as unknown as T;
 };
